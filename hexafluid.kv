@@ -1,0 +1,18 @@
+#:kivy 1.5.1
+#:import math math
+
+<Hexagon>:
+    canvas:
+        Color:
+            hsv: 0, 0, self.density
+        Mesh:
+            vertices: ( self.center_x, self.center_y, 0, 0, self.right, self.center_y, 0, 0, self.center_x + math.cos(math.pi/3)*self.width/2, self.top, 0, 0, self.center_x + math.cos(2*math.pi/3)*self.width/2, self.top, 0, 0, self.x, self.center_y, 0, 0, self.center_x + math.cos(4*math.pi/3)*self.width/2, self.y, 0, 0, self.center_x + math.cos(5*math.pi/3)*self.width/2, self.y, 0, 0, self.right, self.center_y, 0, 0)
+            indices: (0, 1, 2, 3, 4, 5, 6, 7)
+            mode: "triangle_fan"
+        Color:
+            rgb: 0, 1, 0
+        Rectangle:
+            pos: (0, 0)
+            size: (20, 10)
+
+

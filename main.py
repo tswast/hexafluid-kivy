@@ -16,16 +16,21 @@ from kivy.uix.widget import Widget
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.properties import NumericProperty
 
+import board
+
 
 class Hexagon(Widget):
     tileradius = NumericProperty(1.0)
     density = NumericProperty(1.0)
 
-    def __init__(self, **kwargs):
+    def __init__(self, is_filled, **kwargs):
         super(Hexagon, self).__init__(**kwargs)
         # Center + six sides
-        #self.densities = [ random() for i in xrange(7) ]
-        self.densities = [ 1, random(), 0, 0, 0, 0, 0 ]
+        if is_filled:
+            self.densities = [ random() for i in xrange(7) ]
+            #self.densities = [ 1, random(), 0, 0, 0, 0, 0 ]
+        else:
+            self.densities = [ 0 for i in xrange(7) ]
         self.propogated_densities = copy.copy(self.densities)
         self.recalculateDensity()
 
@@ -39,12 +44,16 @@ class TileMap(RelativeLayout):
 
         # How many tiles to make? 32x64?
         tileradius = 8
+
+        loaded_tiles = board.load_board()
+
         self.tiles = []
         for y_tile in xrange(64):
             row = []
             self.tiles.append(row)
             for x_tile in xrange(32):
                 hexagon = Hexagon(
+                    loaded_tiles[y_tile][x_tile],
                     pos=((x_tile+1) * 3 * tileradius + (y_tile % 2) * (1.5 * tileradius),
                         (y_tile+1) * 0.5 * sqrt(3) * tileradius),
                     size_hint=(1.0/64, 1.0/64))

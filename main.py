@@ -1,3 +1,5 @@
+from __future__ import division
+
 import kivy
 kivy.require('1.5.1')
 
@@ -5,6 +7,7 @@ kivy.require('1.5.1')
 # from kivy.config import Config
 # Config.set('modules', 'monitor', '')
 
+import copy
 from random import random
 from math import sqrt
 from kivy.app import App
@@ -17,22 +20,17 @@ from kivy.properties import NumericProperty
 class Hexagon(Widget):
     tileradius = NumericProperty(1.0)
     density = NumericProperty(1.0)
-    density_top_left = NumericProperty(1.0)
-    density_top_middle = NumericProperty(1.0)
-    density_top_right = NumericProperty(1.0)
-    density_bottom_left = NumericProperty(1.0)
-    density_bottom_middle = NumericProperty(1.0)
-    density_bottom_right = NumericProperty(1.0)
-    density_center = NumericProperty(1.0)
+
+    def __init__(self, **kwargs):
+        super(Hexagon, self).__init__(**kwargs)
+        # Center + six sides
+        #self.densities = [ random() for i in xrange(7) ]
+        self.densities = [ 1, random(), 0, 0, 0, 0, 0 ]
+        self.propogated_densities = copy.copy(self.densities)
+        self.recalculateDensity()
 
     def recalculateDensity(self):
-        self.density = (self.density_top_left +
-                self.density_top_middle +
-                self.density_top_right +
-                self.density_bottom_left +
-                self.density_bottom_middle +
-                self.density_bottom_right +
-                self.density_center) / 7.0
+        self.density = sum(self.densities) / len(self.densities)
 
 
 class TileMap(RelativeLayout):
@@ -53,16 +51,6 @@ class TileMap(RelativeLayout):
                 self.add_widget(hexagon)
                 hexagon.tileradius = tileradius
                 hexagon.height=(tileradius*sqrt(3))
-
-                # Randomly assign densities.
-                hexagon.density_top_left = random()
-                hexagon.density_top_middle = random()
-                hexagon.density_top_right = random()
-                hexagon.density_bottom_left = random()
-                hexagon.density_bottom_middle = random()
-                hexagon.density_bottom_right = random()
-                hexagon.density_center = random()
-                hexagon.recalculateDensity()
                 row.append(hexagon)
 
     def update(self, *args, **kwargs):
@@ -70,26 +58,59 @@ class TileMap(RelativeLayout):
         self.do_collision_step()
 
     def do_propagation_step(self):
-        pass
+        for row_i, row in enumerate(self.tiles):
+            for col_i, hexagon in enumerate(row):
+                for i, density in enumerate(hexagon.densities):
+                    if i == 0:
+                        hexagon.propogated_densities[0] = density
+                    elif i == 1:
+                        # Top. Two rows above.
+                        top_y = row_i - 2
+                        if top_y < 0:
+                            top_y += 64
+                        self.tiles[top_y][col_i].propogated_densities[1] = density
+                    elif i == 2:
+                        # Top-right. One row above, one right
+                        top_y = row_i - 1
+                        if top_y < 0:
+                            top_y += 64
+                        top_x = (col_i + 1) % 32
+                        self.tiles[top_y][top_x].propogated_densities[2] = density
+                    elif i == 3:
+                        # Bottom-right. One row below, one right
+                        top_y = (row_i + 1) % 64
+                        top_x = (col_i + 1) % 32
+                        self.tiles[top_y][top_x].propogated_densities[3] = density
+                    elif i == 4:
+                        # Bottom. Two rows below.
+                        top_y = (row_i + 2) % 64
+                        self.tiles[top_y][col_i].propogated_densities[4] = density
+                    elif i == 5:
+                        # Bottom-left. One rows below.
+                        top_y = (row_i + 1) % 64
+                        self.tiles[top_y][col_i].propogated_densities[5] = density
+                    elif i == 6:
+                        # Top-left. One rows above.
+                        top_y = (row_i - 1)
+                        if top_y < 0:
+                            top_y += 64
+                        self.tiles[top_y][col_i].propogated_densities[6] = density
+
+
+                
 
     def do_collision_step(self):
         for row in self.tiles:
             for hexagon in row:
                 # Randomly assign densities.
-                hexagon.density_top_left = random()
-                hexagon.density_top_middle = random()
-                hexagon.density_top_right = random()
-                hexagon.density_bottom_left = random()
-                hexagon.density_bottom_middle = random()
-                hexagon.density_bottom_right = random()
-                hexagon.density_center = random()
+                hexagon.densities = copy.copy(hexagon.propogated_densities)
                 hexagon.recalculateDensity()
 
 
 class HexafluidApp(App):
     def build(self):
         app = TileMap()
-        Clock.schedule_interval(app.update, 0.5)
+        Clock.schedule_interval(app.update, 1.0 / 60)
         return app
 
 if __name__ == '__main__':

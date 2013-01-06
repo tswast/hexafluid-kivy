@@ -28,7 +28,7 @@ class Hexagon(Widget):
         # Center + six sides
         if is_filled:
             self.densities = [ random() for i in xrange(7) ]
-            #self.densities = [ 1, random(), 0, 0, 0, 0, 0 ]
+            #self.densities = [ 1, 0, 0, 0, 0, 0, 1 ]
         else:
             self.densities = [ 0 for i in xrange(7) ]
         self.propogated_densities = copy.copy(self.densities)
@@ -83,14 +83,14 @@ class TileMap(RelativeLayout):
                         top_y = row_i - 1
                         if top_y < 0:
                             top_y += 64
-                        # Doing 1 - (col_i%2) gets us same if odd column
-                        top_x = (col_i + (1 - (col_i % 2))) % 32
+                        # Doing + (row_i%2) gets us same if even row 
+                        top_x = (col_i + ((row_i % 2))) % 32
                         self.tiles[top_y][top_x].propogated_densities[2] = density
                     elif i == 3:
                         # Bottom-right. One row below, one right (or same)
                         top_y = (row_i + 1) % 64
-                        # Doing 1 - (col_i%2) gets us same if odd column
-                        top_x = (col_i + (1 - (col_i % 2))) % 32
+                        # Doing + (row_i%2) gets us same if even row 
+                        top_x = (col_i + ((row_i % 2))) % 32
                         self.tiles[top_y][top_x].propogated_densities[3] = density
                     elif i == 4:
                         # Bottom. Two rows below.
@@ -99,16 +99,16 @@ class TileMap(RelativeLayout):
                     elif i == 5:
                         # Bottom-left. One rows below.
                         top_y = (row_i + 1) % 64
-                        # Doing  - (col_i%2) gets us same if even column
-                        top_x = col_i - (col_i % 2)
+                        # Doing  1 - (row_i%2) gets us same if odd row 
+                        top_x = col_i - (1 - (row_i % 2))
                         self.tiles[top_y][top_x].propogated_densities[5] = density
                     elif i == 6:
                         # Top-left. One rows above.
                         top_y = (row_i - 1)
                         if top_y < 0:
                             top_y += 64
-                        # Doing  - (col_i%2) gets us same if even column
-                        top_x = col_i - (col_i % 2)
+                        # Doing  1 - (row_i%2) gets us same if odd row 
+                        top_x = col_i - (1 - (row_i % 2))
                         self.tiles[top_y][top_x].propogated_densities[6] = density
 
 
@@ -125,14 +125,15 @@ class TileMap(RelativeLayout):
                 # density. I'm pretty sure this will *not* conserve energy
                 # or momentum.
                 average_density = sum(hexagon.densities) / len(hexagon.densities)
-                hexagon.densities = [average_density for d in hexagon.densities]
+                hexagon.densities = [average_density
+                        for d in hexagon.densities]
                 hexagon.recalculateDensity()
 
 
 class HexafluidApp(App):
     def build(self):
         app = TileMap()
-        Clock.schedule_interval(app.update, 1.0 / 60)
+        Clock.schedule_interval(app.update, 1.0 / 10)
         return app
 
 if __name__ == '__main__':

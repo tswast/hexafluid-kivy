@@ -79,16 +79,18 @@ class TileMap(RelativeLayout):
                             top_y += 64
                         self.tiles[top_y][col_i].propogated_densities[1] = density
                     elif i == 2:
-                        # Top-right. One row above, one right
+                        # Top-right. One row above, one right (or same)
                         top_y = row_i - 1
                         if top_y < 0:
                             top_y += 64
-                        top_x = (col_i + 1) % 32
+                        # Doing 1 - (col_i%2) gets us same if odd column
+                        top_x = (col_i + (1 - (col_i % 2))) % 32
                         self.tiles[top_y][top_x].propogated_densities[2] = density
                     elif i == 3:
-                        # Bottom-right. One row below, one right
+                        # Bottom-right. One row below, one right (or same)
                         top_y = (row_i + 1) % 64
-                        top_x = (col_i + 1) % 32
+                        # Doing 1 - (col_i%2) gets us same if odd column
+                        top_x = (col_i + (1 - (col_i % 2))) % 32
                         self.tiles[top_y][top_x].propogated_densities[3] = density
                     elif i == 4:
                         # Bottom. Two rows below.
@@ -97,13 +99,17 @@ class TileMap(RelativeLayout):
                     elif i == 5:
                         # Bottom-left. One rows below.
                         top_y = (row_i + 1) % 64
-                        self.tiles[top_y][col_i].propogated_densities[5] = density
+                        # Doing  - (col_i%2) gets us same if even column
+                        top_x = col_i - (col_i % 2)
+                        self.tiles[top_y][top_x].propogated_densities[5] = density
                     elif i == 6:
                         # Top-left. One rows above.
                         top_y = (row_i - 1)
                         if top_y < 0:
                             top_y += 64
-                        self.tiles[top_y][col_i].propogated_densities[6] = density
+                        # Doing  - (col_i%2) gets us same if even column
+                        top_x = col_i - (col_i % 2)
+                        self.tiles[top_y][top_x].propogated_densities[6] = density
 
 
                 
@@ -113,6 +119,13 @@ class TileMap(RelativeLayout):
             for hexagon in row:
                 # Randomly assign densities.
                 hexagon.densities = copy.copy(hexagon.propogated_densities)
+
+                # As an experiment, let's use a collision operator
+                # that sets the density in all directions to the average
+                # density. I'm pretty sure this will *not* conserve energy
+                # or momentum.
+                average_density = sum(hexagon.densities) / len(hexagon.densities)
+                hexagon.densities = [average_density for d in hexagon.densities]
                 hexagon.recalculateDensity()
 
 

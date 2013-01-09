@@ -9,7 +9,7 @@ kivy.require('1.5.1')
 
 import copy
 from random import random
-from math import sqrt
+from math import sqrt, sin, cos, pi
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
@@ -17,7 +17,8 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.properties import NumericProperty
 
 import board
-
+BOARD_HEIGHT = 32
+BOARD_WIDTH = 32
 
 class Hexagon(Widget):
     tileradius = NumericProperty(1.0)
@@ -27,8 +28,8 @@ class Hexagon(Widget):
         super(Hexagon, self).__init__(**kwargs)
         # Center + six sides
         if is_filled:
-            self.densities = [ random() for i in xrange(7) ]
-            #self.densities = [ 1, 0, 0, 0, 0, 0, 1 ]
+            #self.densities = [ random() for i in xrange(7) ]
+            self.densities = [ 1, 0, 0, 0, 0, 0, 1 ]
         else:
             self.densities = [ 0 for i in xrange(7) ]
         self.propogated_densities = copy.copy(self.densities)
@@ -43,19 +44,31 @@ class TileMap(RelativeLayout):
         super(TileMap, self).__init__(**kwargs) # init ScatterPlane with above parameters
 
         # How many tiles to make? 32x64?
-        tileradius = 8
+        tileradius = 10
+        basis_x = cos(-30 * pi / 180.0) * tileradius
+        basis_y = sin(-30 * pi / 180.0) * tileradius
 
         loaded_tiles = board.load_board()
 
+        origin_x = 400
+        origin_y = 500
+
         self.tiles = []
-        for y_tile in xrange(64):
+        for y_tile in xrange(BOARD_HEIGHT):
             row = []
             self.tiles.append(row)
-            for x_tile in xrange(32):
+            for x_tile in xrange(BOARD_WIDTH):
                 hexagon = Hexagon(
                     loaded_tiles[y_tile][x_tile],
-                    pos=((x_tile+1) * 3 * tileradius + (y_tile % 2) * (1.5 * tileradius),
-                        (y_tile+1) * 0.5 * sqrt(3) * tileradius),
+                    # Transform to hexagonal coordinates.
+                    pos=(origin_x +
+                            x_tile * basis_x +
+                            y_tile * (-basis_x), # y-basis goes in mirror direction
+                        origin_y +
+                            x_tile * basis_y +
+                            y_tile * basis_y),
+                    #pos=((x_tile + y_tile,
+                    #    (y_tile+1) * 0.5 * sqrt(3) * tileradius),
                     size_hint=(1.0/64, 1.0/64))
                 self.add_widget(hexagon)
                 hexagon.tileradius = tileradius
@@ -70,45 +83,41 @@ class TileMap(RelativeLayout):
         for row_i, row in enumerate(self.tiles):
             for col_i, hexagon in enumerate(row):
                 for i, density in enumerate(hexagon.densities):
+                    # Note that in Python, modulus (%) is the same as
+                    # the remainder term from the built-in divmod().
+                    # This has the very nice property of always being
+                    # a positive number!
                     if i == 0:
                         hexagon.propogated_densities[0] = density
                     elif i == 1:
-                        # Top. Two rows above.
-                        top_y = row_i - 2
-                        if top_y < 0:
-                            top_y += 64
-                        self.tiles[top_y][col_i].propogated_densities[1] = density
+                        # Top.
+                        top_y = ( row_i - 1 ) % BOARD_HEIGHT
+                        top_x = ( col_i - 1 ) % BOARD_WIDTH
+                        self.tiles[top_y][top_x].propogated_densities[1] = density
                     elif i == 2:
-                        # Top-right. One row above, one right (or same)
-                        top_y = row_i - 1
-                        if top_y < 0:
-                            top_y += 64
-                        # Doing + (row_i%2) gets us same if even row 
-                        top_x = (col_i + ((row_i % 2))) % 32
+                        # Top-right.
+                        top_y = row_i
+                        top_x = ( col_i - 1 ) % BOARD_WIDTH
                         self.tiles[top_y][top_x].propogated_densities[2] = density
                     elif i == 3:
-                        # Bottom-right. One row below, one right (or same)
-                        top_y = (row_i + 1) % 64
-                        # Doing + (row_i%2) gets us same if even row 
-                        top_x = (col_i + ((row_i % 2))) % 32
+                        # Bottom-right.
+                        top_y = (row_i + 1) % BOARD_HEIGHT
+                        top_x = col_i
                         self.tiles[top_y][top_x].propogated_densities[3] = density
                     elif i == 4:
-                        # Bottom. Two rows below.
-                        top_y = (row_i + 2) % 64
-                        self.tiles[top_y][col_i].propogated_densities[4] = density
+                        # Bottom.
+                        top_y = (row_i + 1) % BOARD_HEIGHT
+                        top_x = (col_i + 1) % BOARD_WIDTH
+                        self.tiles[top_y][top_x].propogated_densities[4] = density
                     elif i == 5:
-                        # Bottom-left. One rows below.
-                        top_y = (row_i + 1) % 64
-                        # Doing  1 - (row_i%2) gets us same if odd row 
-                        top_x = col_i - (1 - (row_i % 2))
+                        # Bottom-left.
+                        top_y = row_i
+                        top_x = (col_i + 1) % BOARD_WIDTH
                         self.tiles[top_y][top_x].propogated_densities[5] = density
                     elif i == 6:
-                        # Top-left. One rows above.
-                        top_y = (row_i - 1)
-                        if top_y < 0:
-                            top_y += 64
-                        # Doing  1 - (row_i%2) gets us same if odd row 
-                        top_x = col_i - (1 - (row_i % 2))
+                        # Top-left.
+                        top_y = (row_i - 1) % BOARD_HEIGHT
+                        top_x = col_i
                         self.tiles[top_y][top_x].propogated_densities[6] = density
 
 
@@ -124,9 +133,9 @@ class TileMap(RelativeLayout):
                 # that sets the density in all directions to the average
                 # density. I'm pretty sure this will *not* conserve energy
                 # or momentum.
-                average_density = sum(hexagon.densities) / len(hexagon.densities)
-                hexagon.densities = [average_density
-                        for d in hexagon.densities]
+                #average_density = sum(hexagon.densities) / len(hexagon.densities)
+                #hexagon.densities = [average_density
+                #        for d in hexagon.densities]
                 hexagon.recalculateDensity()
 
 
